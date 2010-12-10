@@ -1,6 +1,10 @@
 # netsync.go
 
-netsync.go achieves reliable synchronization in an unreliable, asynchronous network. 
+netsync.go achieves reliable synchronization among unreliable processes in a network.
+
+## Motivation
+
+Distributed algorithms consist of autonomous processes which participate in a network protocol. However, network communication is often asynchronous and protocol participants can fail. Both factors contribute to the complexity of distributed software architectures. netsync.go is an implementation of the [Paxos algorithm](http://en.wikipedia.org/wiki/Paxos_algorithm) to deal with some of these complexities by enabling unreliable, distributed processes to reach agreement on decisions. 
 
 ## Installation
 
