@@ -29,24 +29,28 @@ func NewProposal(id uint64, value []byte) *Proposal {
 type Acceptor interface {
 
 	// Returns the most recently promised proposal number.
-	// If no promises have been made, the return value is zero.
+	// Note that promised proposal numbers are always increasing.
+	// Moreover, if PromisedId() is strictly less than AcceptedId(),
+	// the acceptor is part of a minority of acceptors which accepted
+	// a proposal without having received the preceding prepare message.
+	// If no promise has been made, then the returned integer is zero.
 	PromisedId() uint64
 
 	// Returns the most recently accepted proposal number.
-	// If no proposal has been accepted, the return value is zero.
+	// Note that accepted proposal numbers are always increasing.
+	// If no proposal has been accepted, the returned integer is zero.
 	AcceptedId() uint64
 
-	// A successful response implies that the acceptor has incremented its
-	// promised proposal number to the issued proposal number. Henceforth,
-	// it rejects all lower-numbered proposals. Before an acceptor replies
-	// with such a promise, it must persist the promised proposal number to
-	// a durable media.
+	// An acceptor updates PromisedId() to higher-numbered proposals.
+	// Henceforth, acceptors promise to reject lower-numbered proposals.
+	// Before an acceptor replies with such a promise, it must persist the
+	// promised proposal number to stable storage which survives failures.
 	OnPrepare(*Proposal) *PromiseMessage
 
-	// Accepts a proposal if its unique number is greater than or equal to
-	// all proposal numbers for which OnPrepare(*Proposal) has succeeded.
-	// Before an acceptor broadcasts a successful response, it must persist
-	// the accepted proposal number and value to a durable media.
+	// An acceptor accepts proposals with unique numbers greater than or
+	// equal to PromisedId(). Before an acceptor broadcasts a successful
+	// response, it must persist the newly accepted proposal number and
+	// its value to stable storage which survives failures and restarts.
 	OnPropose(*Proposal) *AcceptMessage
 }
 
