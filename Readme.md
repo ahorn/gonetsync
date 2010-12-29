@@ -9,9 +9,10 @@ Distributed algorithms consist of autonomous processes which participate in a ne
 ## Installation
 
 1. Make sure you have got a working Go environment. See the [install instructions](http://golang.org/doc/install.html). netsync.go targets the 'release' tag. 
-2. Since netsync.go installs itself as a Go package, the environment variable $GOROOT must be set. 
-3. git clone git://github.com/ahorn/netsync.go.git
-4. cd netsync.go && make install
+2. Install the [Go implementation](http://code.google.com/p/goprotobuf/) of [Google's protocol buffers](http://code.google.com/p/protobuf/).
+3. Since netsync.go installs itself as a Go package, the environment variable $GOROOT must be set. 
+4. git clone git://github.com/ahorn/netsync.go.git
+5. cd netsync.go && make install
 
 ## License
 
