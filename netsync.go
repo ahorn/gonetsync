@@ -14,8 +14,8 @@ import (
 // with a unique number. The protocol between Proposer and Acceptor processes
 // guarantees that all chosen proposals have the same value. 
 type proposal struct {
-	uuid    uint64
-	val []byte
+	uuid uint64
+	val  []byte
 }
 
 // Protocol participant of the distributed consensus algorithm.
@@ -92,7 +92,7 @@ func (a *acceptor) OnPrepare(uuid uint64) (response *PromiseMessage) {
 func (a *acceptor) OnPropose(uuid uint64, val []byte) (response *AcceptMessage) {
 	ok := a.isNew(uuid)
 	if ok {
-		a.acceptedProposal = &proposal{ uuid, val }
+		a.acceptedProposal = &proposal{uuid, val}
 	}
 	return NewAcceptMessage(uuid, ok)
 }
@@ -137,7 +137,7 @@ func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
 
 		return accept.toResponse()
 	}
-	
+
 	return nil, nil
 }
 

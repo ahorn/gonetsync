@@ -83,8 +83,8 @@ func TestStop(t *testing.T) {
 }
 
 type Test struct {
-	request            Message
-	expectedOk         bool
+	request              Message
+	expectedOk           bool
 	expectedPromisedUuid uint64
 	expectedAcceptedUuid uint64
 }
