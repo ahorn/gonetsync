@@ -1,0 +1,39 @@
+package netsync;
+
+// 8-bit constants suitable for Hamming code encoding
+enum Phase {
+	PREPARE 		= 0; 	// 0b00000000
+	PROPOSE			= 25;	// 0b00011001
+	PROMISE			= 51;	// 0b00110011
+	ACCEPT			= 120;	// 0b01111000
+}
+
+// Prepare request sent by proposer
+message PrepareMessage {
+	required Phase	phase	= 1;	// always set to PREPARE
+	required uint64	uuid	= 2;
+}
+
+// Propose request sent by proposer after having received
+// successful promise responses from a majority of acceptors
+message ProposeMessage {
+	required Phase	phase	= 1;	// always set to PROPOSE
+	required uint64	uuid	= 2;
+	required bytes	val	= 3;
+}
+
+// Promise response sent by acceptor after having received a prepare request
+message PromiseMessage {
+	required Phase	phase 	= 1;	// always set to PROMISE
+	required uint64	reUuid	= 2;	// unique proposal number which triggered the promise
+	required bool	ok	= 3;	// flag which indicates if proposer's request has been successful
+	optional uint64	uuid	= 4;	// most recently accepted or promised unique proposal number (if any)
+	optional bytes	val	= 5;	// value of most recently accepted proposal (if any)
+}
+
+// Accept response sent by acceptor after having received a propose request
+message AcceptMessage {
+	required Phase	phase	= 1;	// always set to ACCEPT
+	required uint64	reUuid	= 2;	// unique proposal number which triggered the accept message
+	required bool	ok	= 3;	// flag which indicates if proposer's request has been successful
+}

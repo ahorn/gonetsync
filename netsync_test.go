@@ -3,6 +3,7 @@ package netsync
 import (
 	"testing"
 	"os"
+	"goprotobuf.googlecode.com/hg/proto"
 )
 
 const (
@@ -13,15 +14,15 @@ const (
 // Data structure and methods under test
 var fa *FileAcceptor
 
-func TestInitPromisedId(t *testing.T) {
-	if id := fa.PromisedId(); id != initId {
-		t.Fatalf("TestInitPromisedId expected %q got %q", initId, id)
+func TestInitPromisedUuid(t *testing.T) {
+	if uuid := fa.PromisedUuid(); uuid != initId {
+		t.Fatalf("TestInitPromisedUuid expected %q got %q", initId, uuid)
 	}
 }
 
-func TestInitAcceptedId(t *testing.T) {
-	if id := fa.AcceptedId(); id != initId {
-		t.Fatalf("TestInitAcceptedId expected %q got %q", initId, id)
+func TestInitAcceptedUuid(t *testing.T) {
+	if uuid := fa.AcceptedUuid(); uuid != initId {
+		t.Fatalf("TestInitAcceptedUuid expected %q got %q", initId, uuid)
 	}
 }
 
@@ -82,32 +83,32 @@ func TestStop(t *testing.T) {
 }
 
 type Test struct {
-	request            ProposerMessage
+	request            Message
 	expectedOk         bool
-	expectedPromisedId uint64
-	expectedAcceptedId uint64
+	expectedPromisedUuid uint64
+	expectedAcceptedUuid uint64
 }
 
 var (
 	someValue      = []byte{0x07, 0x03}
 	someOtherValue = []byte{0xA3, 0xB7}
 	tests          = []Test{
-		{NewPrepareMessage(1), true, 1, 0},
-		{NewPrepareMessage(2), true, 2, 0},
-		{NewPrepareMessage(1), false, 2, 0},
-		{NewPrepareMessage(3), true, 3, 0},
-		{NewProposeMessage(NewProposal(2, someValue)), false, 3, 0},
-		{NewProposeMessage(NewProposal(3, someValue)), true, 3, 3},
-		{NewPrepareMessage(2), false, 3, 3},
-		{NewPrepareMessage(5), true, 5, 3},
-		{NewPrepareMessage(7), true, 7, 3},
-		{NewPrepareMessage(2), false, 7, 3},
-		{NewProposeMessage(NewProposal(5, someValue)), false, 7, 3},
-		{NewProposeMessage(NewProposal(7, someValue)), true, 7, 7},
-		{NewPrepareMessage(7), true, 7, 7},
-		{NewProposeMessage(NewProposal(7, someValue)), true, 7, 7},
-		{NewPrepareMessage(8), true, 8, 7},
-		{NewProposeMessage(NewProposal(8, someOtherValue)), true, 8, 8},
+		{toMessage(NewPrepareMessage(1)), true, 1, 0},
+		{toMessage(NewPrepareMessage(2)), true, 2, 0},
+		{toMessage(NewPrepareMessage(1)), false, 2, 0},
+		{toMessage(NewPrepareMessage(3)), true, 3, 0},
+		{toMessage(NewProposeMessage(&proposal{2, someValue})), false, 3, 0},
+		{toMessage(NewProposeMessage(&proposal{3, someValue})), true, 3, 3},
+		{toMessage(NewPrepareMessage(2)), false, 3, 3},
+		{toMessage(NewPrepareMessage(5)), true, 5, 3},
+		{toMessage(NewPrepareMessage(7)), true, 7, 3},
+		{toMessage(NewPrepareMessage(2)), false, 7, 3},
+		{toMessage(NewProposeMessage(&proposal{5, someValue})), false, 7, 3},
+		{toMessage(NewProposeMessage(&proposal{7, someValue})), true, 7, 7},
+		{toMessage(NewPrepareMessage(7)), true, 7, 7},
+		{toMessage(NewProposeMessage(&proposal{7, someValue})), true, 7, 7},
+		{toMessage(NewPrepareMessage(8)), true, 8, 7},
+		{toMessage(NewProposeMessage(&proposal{8, someOtherValue})), true, 8, 8},
 	}
 )
 
@@ -127,16 +128,16 @@ func TestProcess(t *testing.T) {
 			t.Fatalf("TestProcess encountered unexpected error %q", err)
 		}
 
-		if ok := response.IsOk(); ok != test.expectedOk {
-			t.Fatalf("TestProcess expected response.IsOk() == %q", test.expectedOk)
+		if ok := response.ok; ok != test.expectedOk {
+			t.Fatalf("TestProcess expected response.Ok == %q", test.expectedOk)
 		}
 
-		if id := fa.PromisedId(); id != test.expectedPromisedId {
-			t.Fatalf("TestProcess expected promised ID %d got %d", test.expectedPromisedId, id)
+		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
+			t.Fatalf("TestProcess expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
 		}
 
-		if id := fa.AcceptedId(); id != test.expectedAcceptedId {
-			t.Fatalf("TestProcess expected accepted ID %d got %d", test.expectedAcceptedId, id)
+		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
+			t.Fatalf("TestProcess expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
 		}
 	}
 }
@@ -156,16 +157,16 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)
 		}
 
-		if ok := response.IsOk(); ok != test.expectedOk {
-			t.Fatalf("TestRestart expected response.IsOk() == %q", test.expectedOk)
+		if ok := response.ok; ok != test.expectedOk {
+			t.Fatalf("TestRestart expected response.ok == %q", test.expectedOk)
 		}
 
-		if id := fa.PromisedId(); id != test.expectedPromisedId {
-			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedId, id)
+		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
+			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
 		}
 
-		if id := fa.AcceptedId(); id != test.expectedAcceptedId {
-			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedId, id)
+		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
+			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
 		}
 
 		if err := fa.Stop(); err != nil {
@@ -179,12 +180,12 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)
 		}
 
-		if id := fa.PromisedId(); id != test.expectedPromisedId {
-			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedId, id)
+		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
+			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
 		}
 
-		if id := fa.AcceptedId(); id != test.expectedAcceptedId {
-			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedId, id)
+		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
+			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
 		}
 	}
 }
@@ -195,6 +196,11 @@ func cleanup() {
 	if fa != nil {
 		fa.Stop()
 	}
+}
+
+func toMessage(pb interface{}) Message {
+	data, _ := proto.Marshal(pb)
+	return data
 }
 
 func setup() {
