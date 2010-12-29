@@ -14,15 +14,15 @@ const (
 // Data structure and methods under test
 var fa *FileAcceptor
 
-func TestInitPromisedUuid(t *testing.T) {
-	if uuid := fa.PromisedUuid(); uuid != initId {
-		t.Fatalf("TestInitPromisedUuid expected %q got %q", initId, uuid)
+func TestInitPromisedUusn(t *testing.T) {
+	if uusn := fa.PromisedUusn(); uusn != initId {
+		t.Fatalf("TestInitPromisedUusn expected %q got %q", initId, uusn)
 	}
 }
 
-func TestInitAcceptedUuid(t *testing.T) {
-	if uuid := fa.AcceptedUuid(); uuid != initId {
-		t.Fatalf("TestInitAcceptedUuid expected %q got %q", initId, uuid)
+func TestInitAcceptedUusn(t *testing.T) {
+	if uusn := fa.AcceptedUusn(); uusn != initId {
+		t.Fatalf("TestInitAcceptedUusn expected %q got %q", initId, uusn)
 	}
 }
 
@@ -85,8 +85,8 @@ func TestStop(t *testing.T) {
 type Test struct {
 	request              Message
 	expectedOk           bool
-	expectedPromisedUuid uint64
-	expectedAcceptedUuid uint64
+	expectedPromisedUusn uint64
+	expectedAcceptedUusn uint64
 }
 
 var (
@@ -132,12 +132,12 @@ func TestProcess(t *testing.T) {
 			t.Fatalf("TestProcess expected response.Ok == %q", test.expectedOk)
 		}
 
-		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
-			t.Fatalf("TestProcess expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
+		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
+			t.Fatalf("TestProcess expected promised ID %d got %d", test.expectedPromisedUusn, uusn)
 		}
 
-		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
-			t.Fatalf("TestProcess expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
+		if uusn := fa.AcceptedUusn(); uusn != test.expectedAcceptedUusn {
+			t.Fatalf("TestProcess expected accepted ID %d got %d", test.expectedAcceptedUusn, uusn)
 		}
 	}
 }
@@ -161,12 +161,12 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart expected response.ok == %q", test.expectedOk)
 		}
 
-		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
-			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
+		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
+			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUusn, uusn)
 		}
 
-		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
-			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
+		if uusn := fa.AcceptedUusn(); uusn != test.expectedAcceptedUusn {
+			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUusn, uusn)
 		}
 
 		if err := fa.Stop(); err != nil {
@@ -180,12 +180,12 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)
 		}
 
-		if uuid := fa.PromisedUuid(); uuid != test.expectedPromisedUuid {
-			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUuid, uuid)
+		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
+			t.Fatalf("TestRestart expected promised ID %d got %d", test.expectedPromisedUusn, uusn)
 		}
 
-		if uuid := fa.AcceptedUuid(); uuid != test.expectedAcceptedUuid {
-			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUuid, uuid)
+		if uusn := fa.AcceptedUusn(); uusn != test.expectedAcceptedUusn {
+			t.Fatalf("TestRestart expected accepted ID %d got %d", test.expectedAcceptedUusn, uusn)
 		}
 	}
 }

@@ -14,7 +14,7 @@ import (
 // with a unique number. The protocol between Proposer and Acceptor processes
 // guarantees that all chosen proposals have the same value. 
 type proposal struct {
-	uuid uint64
+	uusn uint64
 	val  []byte
 }
 
@@ -26,75 +26,75 @@ type Acceptor interface {
 
 	// Returns the most recently promised proposal number.
 	// Note that promised proposal numbers are always increasing.
-	// Moreover, if PromisedUuid() is strictly less than AcceptedUuid(),
+	// Moreover, if PromisedUusn() is strictly less than AcceptedUusn(),
 	// the acceptor is part of a minority of acceptors which accepted
 	// a proposal without having received the preceding prepare message.
 	// If no promise has been made, then the returned integer is zero.
-	PromisedUuid() uint64
+	PromisedUusn() uint64
 
 	// Returns the most recently accepted proposal number.
 	// Note that accepted proposal numbers are always increasing.
 	// If no proposal has been accepted, the returned integer is zero.
-	AcceptedUuid() uint64
+	AcceptedUusn() uint64
 
-	// An acceptor updates PromisedUuid() to higher-numbered proposals.
+	// An acceptor updates PromisedUusn() to higher-numbered proposals.
 	// Henceforth, acceptors promise to reject lower-numbered proposals.
 	// Before an acceptor replies with such a promise, it must persist the
 	// promised proposal number to stable storage which survives failures.
-	OnPrepare(uuid uint64) *PromiseMessage
+	OnPrepare(uusn uint64) *PromiseMessage
 
 	// An acceptor accepts proposals with unique numbers greater than or
-	// equal to PromisedUuid(). Before an acceptor broadcasts a successful
+	// equal to PromisedUusn(). Before an acceptor broadcasts a successful
 	// response, it must persist the newly accepted proposal number and
 	// its value to stable storage which survives failures and restarts.
-	OnPropose(uuid uint64, val []byte) *AcceptMessage
+	OnPropose(uusn uint64, val []byte) *AcceptMessage
 }
 
 // Abstract acceptor implementation which does not persist proposal information.
 type acceptor struct {
 	// Initially zero
-	promisedUuid uint64
+	promisedUusn uint64
 
 	// Initially nil
 	acceptedProposal *proposal
 }
 
-func (a *acceptor) PromisedUuid() uint64 {
-	return a.promisedUuid
+func (a *acceptor) PromisedUusn() uint64 {
+	return a.promisedUusn
 }
 
-func (a *acceptor) AcceptedUuid() uint64 {
+func (a *acceptor) AcceptedUusn() uint64 {
 	if a.acceptedProposal == nil {
 		return 0
 	}
 
-	return a.acceptedProposal.uuid
+	return a.acceptedProposal.uusn
 }
 
 // Determines if the acceptor can proceed with the proposal.
-func (a *acceptor) isNew(uuid uint64) bool {
-	return a.promisedUuid <= uuid
+func (a *acceptor) isNew(uusn uint64) bool {
+	return a.promisedUusn <= uusn
 }
 
-func (a *acceptor) OnPrepare(uuid uint64) (response *PromiseMessage) {
-	ok := a.isNew(uuid)
+func (a *acceptor) OnPrepare(uusn uint64) (response *PromiseMessage) {
+	ok := a.isNew(uusn)
 	var info *proposal
 	if ok {
-		a.promisedUuid = uuid
+		a.promisedUusn = uusn
 		info = a.acceptedProposal
 	} else {
-		info = &proposal{uuid: a.promisedUuid}
+		info = &proposal{uusn: a.promisedUusn}
 	}
 
-	return NewPromiseMessage(uuid, ok, info)
+	return NewPromiseMessage(uusn, ok, info)
 }
 
-func (a *acceptor) OnPropose(uuid uint64, val []byte) (response *AcceptMessage) {
-	ok := a.isNew(uuid)
+func (a *acceptor) OnPropose(uusn uint64, val []byte) (response *AcceptMessage) {
+	ok := a.isNew(uusn)
 	if ok {
-		a.acceptedProposal = &proposal{uuid, val}
+		a.acceptedProposal = &proposal{uusn, val}
 	}
-	return NewAcceptMessage(uuid, ok)
+	return NewAcceptMessage(uusn, ok)
 }
 
 
@@ -108,7 +108,7 @@ func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
 			return nil, err
 		}
 
-		promise := f.OnPrepare(*prepare.Uuid)
+		promise := f.OnPrepare(*prepare.Uusn)
 		if *promise.Ok {
 			// TODO: Optimize to save only changes in state
 			err = f.saveState()
@@ -126,7 +126,7 @@ func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
 			return nil, err
 		}
 
-		accept := f.OnPropose(*propose.Uuid, propose.Val)
+		accept := f.OnPropose(*propose.Uusn, propose.Val)
 		if *accept.Ok {
 			// TODO: Optimize to save only changes in state
 			err = f.saveState()
@@ -150,14 +150,14 @@ type acceptorEncoder struct {
 // 	64 bits 	- accepted proposal number (if any)
 //	remaining bytes	- accepted value byte sequence (if any)
 func (enc *acceptorEncoder) encode(a *acceptor) os.Error {
-	if err := enc.write(a.promisedUuid); err != nil {
+	if err := enc.write(a.promisedUusn); err != nil {
 		return err
 	}
 	if a.acceptedProposal == nil {
 		return nil
 	}
 
-	if err := enc.write(a.acceptedProposal.uuid); err != nil {
+	if err := enc.write(a.acceptedProposal.uusn); err != nil {
 		return err
 	}
 	if err := enc.write(a.acceptedProposal.val); err != nil {
@@ -188,7 +188,7 @@ func newAcceptorDecoder(file *os.File) *acceptorDecoder {
 }
 
 func (dec *acceptorDecoder) decode() (a acceptor, err os.Error) {
-	if err = dec.read(&a.promisedUuid); err != nil {
+	if err = dec.read(&a.promisedUusn); err != nil {
 		return
 	}
 
@@ -198,7 +198,7 @@ func (dec *acceptorDecoder) decode() (a acceptor, err os.Error) {
 
 	acceptedProposal := new(proposal)
 	acceptedProposal.val = make([]byte, dec.size-headerSize)
-	if err = dec.read(&acceptedProposal.uuid); err != nil {
+	if err = dec.read(&acceptedProposal.uusn); err != nil {
 		return
 	}
 	if err = dec.read(&acceptedProposal.val); err != nil {

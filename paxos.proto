@@ -11,29 +11,29 @@ enum Phase {
 // Prepare request sent by proposer
 message PrepareMessage {
 	required Phase	phase	= 1;	// always set to PREPARE
-	required uint64	uuid	= 2;
+	required uint64	uusn	= 2;
 }
 
 // Propose request sent by proposer after having received
 // successful promise responses from a majority of acceptors
 message ProposeMessage {
 	required Phase	phase	= 1;	// always set to PROPOSE
-	required uint64	uuid	= 2;
+	required uint64	uusn	= 2;
 	required bytes	val	= 3;
 }
 
 // Promise response sent by acceptor after having received a prepare request
 message PromiseMessage {
 	required Phase	phase 	= 1;	// always set to PROMISE
-	required uint64	reUuid	= 2;	// unique proposal number which triggered the promise
+	required uint64	reUusn	= 2;	// unique proposal number which triggered the promise
 	required bool	ok	= 3;	// flag which indicates if proposer's request has been successful
-	optional uint64	uuid	= 4;	// most recently accepted or promised unique proposal number (if any)
+	optional uint64	uusn	= 4;	// most recently accepted or promised unique proposal number (if any)
 	optional bytes	val	= 5;	// value of most recently accepted proposal (if any)
 }
 
 // Accept response sent by acceptor after having received a propose request
 message AcceptMessage {
 	required Phase	phase	= 1;	// always set to ACCEPT
-	required uint64	reUuid	= 2;	// unique proposal number which triggered the accept message
+	required uint64	reUusn	= 2;	// unique proposal number which triggered the accept message
 	required bool	ok	= 3;	// flag which indicates if proposer's request has been successful
 }
