@@ -41,13 +41,13 @@ type Acceptor interface {
 	// Henceforth, acceptors promise to reject lower-numbered proposals.
 	// Before an acceptor replies with such a promise, it must persist the
 	// promised proposal number to stable storage which survives failures.
-	OnPrepare(uusn uint64) *PromiseMessage
+	OnPrepare(uusn uint64) (*PromiseMessage, os.Error)
 
 	// An acceptor accepts proposals with unique numbers greater than or
 	// equal to PromisedUusn(). Before an acceptor broadcasts a successful
 	// response, it must persist the newly accepted proposal number and
 	// its value to stable storage which survives failures and restarts.
-	OnPropose(uusn uint64, val []byte) *AcceptMessage
+	OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error)
 }
 
 // Abstract acceptor implementation which does not persist proposal information.
@@ -76,7 +76,7 @@ func (a *acceptor) isNew(uusn uint64) bool {
 	return a.promisedUusn <= uusn
 }
 
-func (a *acceptor) OnPrepare(uusn uint64) (response *PromiseMessage) {
+func (a *acceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	ok := a.isNew(uusn)
 	var info *proposal
 	if ok {
@@ -86,15 +86,15 @@ func (a *acceptor) OnPrepare(uusn uint64) (response *PromiseMessage) {
 		info = &proposal{uusn: a.promisedUusn}
 	}
 
-	return NewPromiseMessage(uusn, ok, info)
+	return NewPromiseMessage(uusn, ok, info), nil
 }
 
-func (a *acceptor) OnPropose(uusn uint64, val []byte) (response *AcceptMessage) {
+func (a *acceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
 	ok := a.isNew(uusn)
 	if ok {
 		a.acceptedProposal = &proposal{uusn, val}
 	}
-	return NewAcceptMessage(uusn, ok)
+	return NewAcceptMessage(uusn, ok), nil
 }
 
 type acceptorEncoder struct {
@@ -190,6 +190,32 @@ type FileAcceptor struct {
 // Initialize an acceptor which persists accepted proposals in a named file.
 func NewFileAcceptor(name string) *FileAcceptor {
 	return &FileAcceptor{Name: name}
+}
+
+func (fa *FileAcceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
+	promise, _ := fa.acceptor.OnPrepare(uusn)
+	if *promise.Ok {
+		// TODO: Optimize to save only changes in state
+		err := fa.saveState()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return promise, nil
+}
+
+
+func (fa *FileAcceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
+	accept, _ := fa.acceptor.OnPropose(uusn, val)
+	if *accept.Ok {
+		// TODO: Optimize to save only changes in state
+		err := fa.saveState()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return accept, nil
 }
 
 // Restore the state of the acceptor before joining the protocol.

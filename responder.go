@@ -28,14 +28,9 @@ func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 			return nil, err
 		}
 
-		promise := proc.fa.OnPrepare(*prepare.Uusn)
-		if *promise.Ok {
-			// TODO: Optimize to save only changes in state
-			err = proc.fa.saveState()
-			if err != nil {
-				return nil, err
-			}
-
+		promise, err := proc.fa.OnPrepare(*prepare.Uusn)
+		if err != nil {
+			return nil, err
 		}
 
 		return promise.Marshal()
@@ -46,16 +41,13 @@ func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 			return nil, err
 		}
 
-		accept := proc.fa.OnPropose(*propose.Uusn, propose.Val)
-		if *accept.Ok {
-			// TODO: Optimize to save only changes in state
-			err = proc.fa.saveState()
-			if err != nil {
-				return nil, err
-			}
+		accept, err := proc.fa.OnPropose(*propose.Uusn, propose.Val)
+		if err != nil {
+			return nil, err
 		}
 
 		return accept.Marshal()
+
 	}
 
 	return nil, nil
