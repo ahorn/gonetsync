@@ -7,15 +7,14 @@ type Responder interface {
 
 	// Builds a response based on a request.
 	Respond(request Message) (response Message, err os.Error)
-
 }
 
 type Proc struct {
-	fa	*FileAcceptor
+	fa *FileAcceptor
 }
 
 func NewProc(fa *FileAcceptor) *Proc {
-	return &Proc{ fa }
+	return &Proc{fa}
 }
 
 // Saves the acceptor state to a file if the request has been successful.
