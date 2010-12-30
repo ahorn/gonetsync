@@ -112,32 +112,33 @@ var (
 	}
 )
 
-func TestProcess(t *testing.T) {
+func TestResponder(t *testing.T) {
 	defer cleanup()
 
 	err := fa.Start()
 	if err != nil {
-		t.Fatalf("TestProcess encountered unexpected error %q", err)
+		t.Fatalf("TestResponder encountered unexpected error %q", err)
 	}
 	defer fa.Stop()
 
+	proc := NewProc(fa)
 	for _, test := range tests {
-		response, err := fa.Process(test.request)
+		response, err := proc.Respond(test.request)
 
 		if err != nil {
-			t.Fatalf("TestProcess encountered unexpected error %q", err)
+			t.Fatalf("TestResponder encountered unexpected error %q", err)
 		}
 
 		if ok := isOk(response); ok != test.expectedOk {
-			t.Fatalf("TestProcess expected isOk(response) == %q", test.expectedOk)
+			t.Fatalf("TestResponder expected isOk(response) == %q", test.expectedOk)
 		}
 
 		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
-			t.Fatalf("TestProcess expected promised ID %d got %d", test.expectedPromisedUusn, uusn)
+			t.Fatalf("TestResponder expected promised ID %d got %d", test.expectedPromisedUusn, uusn)
 		}
 
 		if uusn := fa.AcceptedUusn(); uusn != test.expectedAcceptedUusn {
-			t.Fatalf("TestProcess expected accepted ID %d got %d", test.expectedAcceptedUusn, uusn)
+			t.Fatalf("TestResponder expected accepted ID %d got %d", test.expectedAcceptedUusn, uusn)
 		}
 	}
 }
@@ -151,7 +152,8 @@ func TestRestart(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		response, err := fa.Process(test.request)
+		proc := NewProc(fa)
+		response, err := proc.Respond(test.request)
 
 		if err != nil {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)

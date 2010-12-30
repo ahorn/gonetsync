@@ -97,50 +97,6 @@ func (a *acceptor) OnPropose(uusn uint64, val []byte) (response *AcceptMessage) 
 	return NewAcceptMessage(uusn, ok)
 }
 
-
-// Saves the acceptor state to a file if the request has been successful.
-// Returns a nil response if incoming message does not conform to the protocol.
-func (f *FileAcceptor) Process(request Message) (Message, os.Error) {
-	switch request.Phase() {
-	case Phase_PREPARE:
-		prepare, err := request.toPrepareMessage()
-		if err != nil {
-			return nil, err
-		}
-
-		promise := f.OnPrepare(*prepare.Uusn)
-		if *promise.Ok {
-			// TODO: Optimize to save only changes in state
-			err = f.saveState()
-			if err != nil {
-				return nil, err
-			}
-
-		}
-
-		return promise.Marshal()
-
-	case Phase_PROPOSE:
-		propose, err := request.toProposeMessage()
-		if err != nil {
-			return nil, err
-		}
-
-		accept := f.OnPropose(*propose.Uusn, propose.Val)
-		if *accept.Ok {
-			// TODO: Optimize to save only changes in state
-			err = f.saveState()
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return accept.Marshal()
-	}
-
-	return nil, nil
-}
-
 type acceptorEncoder struct {
 	writer io.Writer
 }
