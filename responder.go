@@ -17,7 +17,7 @@ func NewProc(fa *FileAcceptor) *Proc {
 	return &Proc{fa}
 }
 
-// Saves the acceptor state to a file if the request has been successful.
+// Dispatches proposer requests to acceptor implementation.
 // Returns a nil response if incoming message does not conform to the Paxos protocol.
 func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 	switch request.Phase() {

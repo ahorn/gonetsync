@@ -78,6 +78,8 @@ func (a *acceptor) isNew(uusn uint64) bool {
 	return a.promisedUusn <= uusn
 }
 
+// Abstract OnPrepare(uint64) implementation which does not
+// persist the promised proposal number to stable storage.
 func (a *acceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	ok := a.isNew(uusn)
 	var info *proposal
@@ -91,89 +93,14 @@ func (a *acceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	return NewPromiseMessage(uusn, ok, info), nil
 }
 
+// Abstract OnPropose(uint64, []byte) implementation which
+// does not persist the accepted proposal to stable storage.
 func (a *acceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
 	ok := a.isNew(uusn)
 	if ok {
 		a.acceptedProposal = &proposal{uusn, val}
 	}
 	return NewAcceptMessage(uusn, ok), nil
-}
-
-// Byte encoding:
-//	64 bits 	- promised proposal number
-// 	64 bits 	- accepted proposal number (if any)
-//	remaining bytes	- accepted value byte sequence (only if there is an accepted proposal number)
-type acceptorEncoder struct {
-	writer io.Writer
-}
-
-func (enc *acceptorEncoder) encodePromisedUusn(promisedUusn uint64) os.Error {
-	return enc.write(promisedUusn)
-}
-
-func (enc *acceptorEncoder) encodeAcceptedProposal(acceptedProposal *proposal) os.Error {
-	if err := enc.write(acceptedProposal.uusn); err != nil {
-		return err
-	}
-	if err := enc.write(acceptedProposal.val); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-
-func (enc *acceptorEncoder) write(data interface{}) os.Error {
-	return binary.Write(enc.writer, binary.LittleEndian, data)
-}
-
-const (
-	// Number of bytes for promised or accepted proposal numbers
-	uusnByteCount = 64 / 8
-
-	// Total number of bytes needed for promised and accepted proposal numbers
-	totalUusnByteCount = 2 * uusnByteCount
-)
-
-type acceptorDecoder struct {
-	reader io.Reader
-	size   int64
-}
-
-func newAcceptorDecoder(file *os.File) *acceptorDecoder {
-	stat, err := file.Stat()
-	if err != nil {
-		return nil
-	}
-	return &acceptorDecoder{file, stat.Size}
-}
-
-func (dec *acceptorDecoder) decode() (a acceptor, err os.Error) {
-	if err = dec.read(&a.promisedUusn); err != nil {
-		return
-	}
-
-	// if there is no accepted proposal number, then there is no accepted proposal value
-	if dec.size < totalUusnByteCount {
-		return
-	}
-
-	acceptedProposal := new(proposal)
-	acceptedProposal.val = make([]byte, dec.size-totalUusnByteCount)
-	if err = dec.read(&acceptedProposal.uusn); err != nil {
-		return
-	}
-	if err = dec.read(acceptedProposal.val); err != nil {
-		return
-	}
-
-	a.acceptedProposal = acceptedProposal
-
-	return
-}
-
-func (dec *acceptorDecoder) read(data interface{}) os.Error {
-	return binary.Read(dec.reader, binary.LittleEndian, data)
 }
 
 // An acceptor which persists promised and accepted proposal to a file.
@@ -198,6 +125,7 @@ func NewFileAcceptor(name string) *FileAcceptor {
 	return &FileAcceptor{Name: name}
 }
 
+// Saves the accepted promised proposal number to a file if the request has been successful.
 func (fa *FileAcceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	promise, _ := fa.acceptor.OnPrepare(uusn)
 	if *promise.Ok {
@@ -209,7 +137,7 @@ func (fa *FileAcceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	return promise, nil
 }
 
-
+// Saves the accepted proposal information to a file if the request has been successful.
 func (fa *FileAcceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
 	accept, _ := fa.acceptor.OnPropose(uusn, val)
 	if *accept.Ok {
@@ -270,4 +198,85 @@ func (fa *FileAcceptor) savePromisedUusn() os.Error {
 func (fa *FileAcceptor) saveAcceptedProposal() os.Error {
 	fa.file.Seek(uusnByteCount, 0)
 	return fa.encoder.encodeAcceptedProposal(fa.acceptedProposal)
+}
+
+// Byte encoding:
+//	64 bits 	- promised proposal number
+// 	64 bits 	- accepted proposal number (if any)
+//	remaining bytes	- accepted value byte sequence (only if there is an accepted proposal number)
+type acceptorEncoder struct {
+	writer io.Writer
+}
+
+func (enc *acceptorEncoder) encodePromisedUusn(promisedUusn uint64) os.Error {
+	return enc.write(promisedUusn)
+}
+
+func (enc *acceptorEncoder) encodeAcceptedProposal(acceptedProposal *proposal) os.Error {
+	if err := enc.write(acceptedProposal.uusn); err != nil {
+		return err
+	}
+	if err := enc.write(acceptedProposal.val); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (enc *acceptorEncoder) write(data interface{}) os.Error {
+	return binary.Write(enc.writer, binary.LittleEndian, data)
+}
+
+
+const (
+	// Number of bytes for promised or accepted proposal numbers
+	uusnByteCount = 64 / 8
+
+	// Total number of bytes needed for promised and accepted proposal numbers
+	totalUusnByteCount = 2 * uusnByteCount
+)
+
+type acceptorDecoder struct {
+	reader io.Reader
+
+	// number of bytes which can be read from the reader
+	size int64
+}
+
+func newAcceptorDecoder(file *os.File) *acceptorDecoder {
+	stat, err := file.Stat()
+	if err != nil {
+		return nil
+	}
+	return &acceptorDecoder{reader: file, size: stat.Size}
+}
+
+// Instantiates a new acceptor and restores its state by
+// decoding promised and accepted proposal information in the reader.
+func (dec *acceptorDecoder) decode() (a acceptor, err os.Error) {
+	if err = dec.read(&a.promisedUusn); err != nil {
+		return
+	}
+
+	// if there is no accepted proposal number, then there is no accepted proposal value
+	if dec.size < totalUusnByteCount {
+		return
+	}
+
+	acceptedProposal := new(proposal)
+	acceptedProposal.val = make([]byte, dec.size-totalUusnByteCount)
+	if err = dec.read(&acceptedProposal.uusn); err != nil {
+		return
+	}
+	if err = dec.read(acceptedProposal.val); err != nil {
+		return
+	}
+
+	a.acceptedProposal = acceptedProposal
+
+	return
+}
+
+func (dec *acceptorDecoder) read(data interface{}) os.Error {
+	return binary.Read(dec.reader, binary.LittleEndian, data)
 }
