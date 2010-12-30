@@ -100,7 +100,7 @@ func (a *acceptor) OnPropose(uusn uint64, val []byte) (response *AcceptMessage) 
 
 // Saves the acceptor state to a file if the request has been successful.
 // Returns a nil response if incoming message does not conform to the protocol.
-func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
+func (f *FileAcceptor) Process(request Message) (Message, os.Error) {
 	switch request.Phase() {
 	case Phase_PREPARE:
 		prepare, err := request.toPrepareMessage()
@@ -118,10 +118,10 @@ func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
 
 		}
 
-		return promise.toResponse()
+		return promise.Marshal()
 
 	case Phase_PROPOSE:
-		propose, err := request.ToProposeMessage()
+		propose, err := request.toProposeMessage()
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ func (f *FileAcceptor) Process(request Message) (*Response, os.Error) {
 			}
 		}
 
-		return accept.toResponse()
+		return accept.Marshal()
 	}
 
 	return nil, nil

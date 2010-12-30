@@ -128,8 +128,8 @@ func TestProcess(t *testing.T) {
 			t.Fatalf("TestProcess encountered unexpected error %q", err)
 		}
 
-		if ok := response.ok; ok != test.expectedOk {
-			t.Fatalf("TestProcess expected response.Ok == %q", test.expectedOk)
+		if ok := isOk(response); ok != test.expectedOk {
+			t.Fatalf("TestProcess expected isOk(response) == %q", test.expectedOk)
 		}
 
 		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
@@ -157,8 +157,8 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)
 		}
 
-		if ok := response.ok; ok != test.expectedOk {
-			t.Fatalf("TestRestart expected response.ok == %q", test.expectedOk)
+		if ok := isOk(response); ok != test.expectedOk {
+			t.Fatalf("TestRestart expected isOk(response) == %q", test.expectedOk)
 		}
 
 		if uusn := fa.PromisedUusn(); uusn != test.expectedPromisedUusn {
@@ -201,6 +201,19 @@ func cleanup() {
 func toMessage(pb interface{}) Message {
 	data, _ := proto.Marshal(pb)
 	return data
+}
+
+// Internal helper function to determine if a request has been successful.
+func isOk(m Message) bool {
+	switch m.Phase() {
+	case Phase_PROMISE:
+		promise, _ := m.toPromiseMessage()
+		return *promise.Ok
+	case Phase_ACCEPT:
+		accept, _ := m.toAcceptMessage()
+		return *accept.Ok
+	}
+	return false
 }
 
 func setup() {
