@@ -155,9 +155,9 @@ func (fa *FileAcceptor) Restart() os.Error {
 	file, err := os.Open(fa.Name, os.O_RDONLY, 0644)
 	if err != nil {
 		return err
-	} else {
-		defer func() { file.Close() }()
 	}
+
+	defer func() { file.Close() }()
 
 	dec := newAcceptorDecoder(file)
 	fa.acceptor, err = dec.decode()
@@ -177,7 +177,7 @@ func (fa *FileAcceptor) Start() (err os.Error) {
 
 // Close the file in which promised and accepted proposals are saved.
 func (fa *FileAcceptor) Stop() os.Error {
-	if fa.file == nil {
+	if !fa.IsStarted() {
 		return nil
 	}
 
