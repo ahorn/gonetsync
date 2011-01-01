@@ -14,13 +14,20 @@ type proposal struct {
 	val  []byte
 }
 
+var (
+	ErrUnsupportedMessage = os.NewError("Message phase is unsupported")
+	ErrCorruptedMessage = os.NewError("Message has been jumbled")
+)
+
 // Interface which dispatches a request to another module to build a response.
 type Responder interface {
 
 	// Builds a response based on a request.
+	// Returns a nil response if no reply should be sent.
 	Respond(request Message) (response Message, err os.Error)
 }
 
+// Structure to delegate messages to the appropriate modules
 type Proc struct {
 	// Embed interface to accept proposals
 	Acceptor
@@ -62,5 +69,5 @@ func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 
 	}
 
-	return nil, nil
+	return nil, ErrUnsupportedMessage
 }

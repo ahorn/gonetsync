@@ -191,6 +191,17 @@ func TestRestart(t *testing.T) {
 	}
 }
 
+func TestUnsupportedMessage(t *testing.T) {
+	proc := NewProc(fa)
+	const invalidPhase byte = 42
+	invalidMessage := make(Message, 2)
+	invalidMessage[1] = invalidPhase
+	_, err := proc.Respond(invalidMessage)
+	if err != ErrUnsupportedMessage {
+			t.Fatalf("TestUnsupportedMessage encountered unexpected error %q", err)
+	}
+}
+
 func cleanup() {
 	defer setup()
 
