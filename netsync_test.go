@@ -151,8 +151,8 @@ func TestRestart(t *testing.T) {
 		t.Fatalf("TestRestart encountered unexpected error %q", err)
 	}
 
+	proc := NewProc(fa)
 	for _, test := range tests {
-		proc := NewProc(fa)
 		response, err := proc.Respond(test.request)
 
 		if err != nil {
@@ -175,7 +175,6 @@ func TestRestart(t *testing.T) {
 			t.Fatalf("TestRestart encountered unexpected error %q", err)
 		}
 
-		fa = NewFileAcceptor(fixture)
 		err = fa.Restart()
 
 		if err != nil {

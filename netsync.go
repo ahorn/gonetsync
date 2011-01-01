@@ -22,11 +22,12 @@ type Responder interface {
 }
 
 type Proc struct {
-	fa *FileAcceptor
+	// Embed interface to accept proposals
+	Acceptor
 }
 
 func NewProc(fa *FileAcceptor) *Proc {
-	return &Proc{fa}
+	return &Proc{Acceptor: fa}
 }
 
 // Dispatches proposer requests to acceptor implementation.
@@ -39,7 +40,7 @@ func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 			return nil, err
 		}
 
-		promise, err := proc.fa.OnPrepare(*prepare.Uusn)
+		promise, err := proc.Acceptor.OnPrepare(*prepare.Uusn)
 		if err != nil {
 			return nil, err
 		}
@@ -52,7 +53,7 @@ func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 			return nil, err
 		}
 
-		accept, err := proc.fa.OnPropose(*propose.Uusn, propose.Val)
+		accept, err := proc.Acceptor.OnPropose(*propose.Uusn, propose.Val)
 		if err != nil {
 			return nil, err
 		}
