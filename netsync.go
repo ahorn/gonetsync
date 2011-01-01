@@ -42,30 +42,30 @@ func NewProc(fa *FileAcceptor) *Proc {
 func (proc *Proc) Respond(request Message) (response Message, err os.Error) {
 	switch request.Phase() {
 	case Phase_PREPARE:
-		prepare, err := request.toPrepareMessage()
+		request, err := request.toPrepareMessage()
 		if err != nil {
 			return nil, err
 		}
 
-		promise, err := proc.Acceptor.OnPrepare(*prepare.Uusn)
+		response, err := proc.Acceptor.OnPrepare(request)
 		if err != nil {
 			return nil, err
 		}
 
-		return promise.Marshal()
+		return response.Marshal()
 
 	case Phase_PROPOSE:
-		propose, err := request.toProposeMessage()
+		request, err := request.toProposeMessage()
 		if err != nil {
 			return nil, err
 		}
 
-		accept, err := proc.Acceptor.OnPropose(*propose.Uusn, propose.Val)
+		response, err := proc.Acceptor.OnPropose(request)
 		if err != nil {
 			return nil, err
 		}
 
-		return accept.Marshal()
+		return response.Marshal()
 
 	}
 

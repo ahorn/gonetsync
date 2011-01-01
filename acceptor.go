@@ -29,13 +29,13 @@ type Acceptor interface {
 	// Henceforth, acceptors promise to reject lower-numbered proposals.
 	// Before an acceptor replies with such a promise, it must persist the
 	// promised proposal number to stable storage which survives failures.
-	OnPrepare(uusn uint64) (*PromiseMessage, os.Error)
+	OnPrepare(request *PrepareMessage) (response *PromiseMessage, err os.Error)
 
 	// An acceptor accepts proposals with unique numbers greater than or
 	// equal to PromisedUusn(). Before an acceptor broadcasts a successful
 	// response, it must persist the newly accepted proposal number and
 	// its value to stable storage which survives failures and restarts.
-	OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error)
+	OnPropose(request *ProposeMessage) (response *AcceptMessage, err os.Error)
 }
 
 // Abstract acceptor implementation which does not persist proposal information.
@@ -66,9 +66,10 @@ func (a *acceptor) isNew(uusn uint64) bool {
 	return a.promisedUusn <= uusn
 }
 
-// Abstract OnPrepare(uint64) implementation which does not
+// Abstract OnPrepare(*PrepareMessage) implementation which does not
 // persist the promised proposal number to stable storage.
-func (a *acceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
+func (a *acceptor) OnPrepare(request *PrepareMessage) (*PromiseMessage, os.Error) {
+	uusn := *request.Uusn
 	ok := a.isNew(uusn)
 	var info *proposal
 	if ok {
@@ -81,9 +82,10 @@ func (a *acceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
 	return NewPromiseMessage(uusn, ok, info), nil
 }
 
-// Abstract OnPropose(uint64, []byte) implementation which
+// Abstract OnPropose(*ProposeMessage) implementation which
 // does not persist the accepted proposal to stable storage.
-func (a *acceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
+func (a *acceptor) OnPropose(request *ProposeMessage) (*AcceptMessage, os.Error) {
+	uusn, val := *request.Uusn, request.Val
 	ok := a.isNew(uusn)
 	if ok {
 		a.acceptedProposal = &proposal{uusn, val}
@@ -114,28 +116,28 @@ func NewFileAcceptor(name string) *FileAcceptor {
 }
 
 // Saves the accepted promised proposal number to a file if the request has been successful.
-func (fa *FileAcceptor) OnPrepare(uusn uint64) (*PromiseMessage, os.Error) {
-	promise, _ := fa.acceptor.OnPrepare(uusn)
-	if *promise.Ok {
+func (fa *FileAcceptor) OnPrepare(request *PrepareMessage) (*PromiseMessage, os.Error) {
+	response, _ := fa.acceptor.OnPrepare(request)
+	if *response.Ok {
 		err := fa.savePromisedUusn()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return promise, nil
+	return response, nil
 }
 
 // Saves the accepted proposal information to a file if the request has been successful.
-func (fa *FileAcceptor) OnPropose(uusn uint64, val []byte) (*AcceptMessage, os.Error) {
-	accept, _ := fa.acceptor.OnPropose(uusn, val)
-	if *accept.Ok {
+func (fa *FileAcceptor) OnPropose(request *ProposeMessage) (*AcceptMessage, os.Error) {
+	response, _ := fa.acceptor.OnPropose(request)
+	if *response.Ok {
 		err := fa.saveAcceptedProposal()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return accept, nil
+	return response, nil
 }
 
 // Restore the state of the acceptor before joining the protocol.
